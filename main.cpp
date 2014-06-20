@@ -2,11 +2,13 @@
 #include "synthesis_creator.h"
 void save(std::vector<optimizer::performance_result> results, std::string cascade_dir_name) {
 	if(results.empty()) return;
-	std::fstream fs("performance.txt", std::ios::out | std::ios::app);
+	std::fstream fs("performance_n15test.txt", std::ios::out | std::ios::app);
 	fs << cascade_dir_name << std::endl;
 	for(std::vector<optimizer::performance_result>::iterator it = results.begin();
 		it != results.end();
 		it++) {
+			/*fs << it->score.precision*100 << "," << it->score.recall*100 << ","
+				<< it->scale << "," << it->min_neighbors << "," << it->fps << std::endl;*/
 			fs << "F measure = "	 << it->score.f_measure <<
 				  " tp = "			 << it->score.tp		<<  
 				  " pre = "			 << it->score.precision <<
@@ -28,9 +30,9 @@ void main() {
 	/*synthesizer::synthesis_ground_truth("../../../db/car/plate_test/plate.txt",
 										"./syn_plate_-15.txt",
 										-15);*/
-	std::string cascade_dir_name[4] = {"../../../include/cascade/plate/808_2721_-15.xml",
+	std::string cascade_dir_name[4] = {"../../../include/cascade/plate/700_2700_-15.xml",
 									   "../../../include/cascade/plate/808_1721_-15.xml",
-									   "../../../include/cascade/plate/700_2700_-15.xml",
+									   "../../../include/cascade/plate/808_2721_-15.xml",
 									   "../../../include/cascade/plate/950_2721_-15.xml"};
 	for(int i = 0; i < 4; i++) {
 		std::vector<optimizer::performance_result> results = optimizer::performance(cascade_dir_name[i],

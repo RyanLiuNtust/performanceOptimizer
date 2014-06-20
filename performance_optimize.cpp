@@ -177,6 +177,37 @@ namespace optimizer {
 		}
 	}
 
+	void is_lp(cv::Mat src, std::vector<cv::Rect> &predict_rects) {
+		for(std::vector<cv::Rect>::iterator it = predict_rects.begin(); it != predict_rects.end();) {
+			//extension(src.cols, src.rows, *it);
+			std::vector<cv::Vec2f> lines;
+			cv::Mat canny;
+			cv::Mat gray;
+			cv::Mat dst = src(*it).clone();
+			cv::cvtColor(src(*it).clone(), gray, CV_BGR2GRAY);
+			cv::Canny(gray, canny, 150, 200, 3);
+			cv::HoughLines(canny, lines, 1, CV_PI/180, 70, 0, 0);
+			bool is_license_plate = false;
+			int total_15 = 0;
+			int total_n15 = 0;
+			for( size_t i = 0; i < lines.size(); i++ ) {
+				float rho = lines[i][0], theta = lines[i][1];
+				//100(100-90) < theta < 110
+				if(theta < 1.92 && theta > 1.744) {
+					total_n15++;
+				}
+				else if (theta > 1.29 && theta < 1.315) {
+					total_15++;
+				}
+			}
+			if((!(total_n15 >= 2 ) && !(total_15 >= 2 ))) {
+				it = predict_rects.erase(it);
+				continue;
+			}
+			it++;
+		}
+	}
+
 	std::vector<performance_result> performance(std::string cascade_dir_name,
 												std::string testing_image_dir_name,
 												std::string ground_truth_file_name,
@@ -201,8 +232,6 @@ namespace optimizer {
 
 		for(int s = 0; s < 6; s++) {
 			for(int n = 0; n < 4; n++) {
-				cv::Size minSize = cv::Size(100, 100);
-				cv::Size maxSize = cv::Size(230, 230);
 				double scale = scales_test[s];
 				int min_neighbors = min_neighbors_test[n];
 
@@ -213,9 +242,12 @@ namespace optimizer {
 				clock_t start_time = clock();
 				for(std::vector<std::string>::iterator it = testing_list.begin(); it != testing_list.end(); it++) {
 					cv::Mat test_img = cv::imread(*it);
+					cv::Size minSize = cv::Size(test_img.cols * 0.1, test_img.rows * 0.1);//100 for license plate with rotation
+					cv::Size maxSize = cv::Size(test_img.cols * 0.9, test_img.rows * 0.9);//250 for license plate with rotation
 					std::vector<cv::Rect> rois = ground_truth.find(*it)->second;
 					std::vector<cv::Rect> predict_rects;
 					classifier.detectMultiScale( test_img, predict_rects, scale, min_neighbors, 0, minSize, maxSize);
+					is_lp(test_img, predict_rects);
 					score_table result = grading(rois, predict_rects, 0.8);
 					performance.score = performance.score + result;
 					performance.score.print();
@@ -225,6 +257,7 @@ namespace optimizer {
 						draw_rects(test_img, rois);
 						draw_rects(test_img, predict_rects, cv::Scalar(0, 255, 0));
 						cv::imshow("roi_test", test_img);
+						cv::imwrite("1.bmp", test_img);
 						cv::waitKey();
 					}
 				}
